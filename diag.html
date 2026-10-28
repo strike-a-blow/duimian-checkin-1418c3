@@ -1,22 +1,44 @@
 <!doctype html>
-<html lang="zh-CN"><head><meta charset="utf-8"><title>Supabase 连接诊断</title></head>
-<body style="font:16px/1.6 -apple-system, sans-serif; padding:24px;">
-<h1>Supabase 连接诊断</h1>
-<pre id="out" style="white-space:pre-wrap; background:#f5f5f5; padding:16px; border-radius:8px;">正在检测…</pre>
+<html lang="zh-CN"><head><meta charset="utf-8"><title>网络与代理诊断</title></head>
+<body style="font:15px/1.6 -apple-system,sans-serif;padding:20px;">
+<h1>网络与代理诊断</h1>
+<pre id="out" style="white-space:pre-wrap;background:#f5f5f5;padding:16px;border-radius:8px;">检测中…</pre>
 <script>
-(async function () {
-  var out = document.getElementById('out');
-  var base = 'https://hlqnpgvmrluxnbhtifnc.supabase.co';
-  var key = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhscW5wZ3Ztcmx1eG5iaHRpZm5jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMxOTcwNDIsImV4cCI6MjEwODc3MzA0Mn0._bJWeNxbDEEfbrrjcLDGHDB_gXvRBwlAKa6TEBZ1qcU';
+const out = document.getElementById('out');
+const key = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhscW5wZ3Ztcmx1eG5iaHRpZm5jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMxOTcwNDIsImV4cCI6MjEwODc3MzA0Mn0._bJWeNxbDEEfbrrjcLDGHDB_gXvRBwlAKa6TEBZ1qcU';
+const supabase = 'https://hlqnpgvmrluxnbhtifnc.supabase.co/rest/v1/checkins?select=id&limit=1';
+const enc = encodeURIComponent(supabase);
+const tests = [
+  ['DIRECT', supabase],
+  ['allorigins', 'https://api.allorigins.win/raw?url=' + enc],
+  ['codetabs', 'https://api.codetabs.com/v1/proxy?quest=' + enc],
+  ['corsproxy.io', 'https://corsproxy.io/?url=' + enc],
+  ['corsproxy.org', 'https://corsproxy.org/?' + enc],
+  ['corsfix', 'https://proxy.corsfix.com/?' + supabase],
+  ['cors.workers.dev', 'https://test.cors.workers.dev/?' + supabase],
+  ['cors.eu.org', 'https://cors.eu.org/' + supabase],
+  ['isomorphic-git', 'https://cors.isomorphic-git.org/' + supabase],
+  ['npoint', 'https://api.npoint.io/7f22a9c6c5cc21a8a321'],
+  ['extendsclass', 'https://extendsclass.com/api/json-storage/bin/fcbeaaa']
+];
+function withTimeout(p, ms) {
+  return Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error('timeout ' + ms)), ms))]);
+}
+async function run(name, url) {
+  if (!url.startsWith('http')) return {name, result: 'SKIP'};
   try {
-    var res = await fetch(base + '/rest/v1/checkins?select=id&limit=1', {
-      headers: { apikey: key, Authorization: 'Bearer ' + key }
-    });
-    var text = await res.text();
-    out.textContent = 'RESULT HTTP ' + res.status + '\n' + text;
-  } catch (err) {
-    out.textContent = 'RESULT FETCH ERROR\n' + String(err);
+    const r = await withTimeout(fetch(url, {headers: {apikey: key, Authorization: 'Bearer ' + key}}), 9000);
+    let t = await r.text();
+    return {name, result: 'HTTP ' + r.status + ' ' + t.slice(0,160).replace(/\s+/g,' ')};
+  } catch (e) {
+    return {name, result: 'ERR ' + String(e).slice(0,180)};
   }
+}
+(async () => {
+  out.textContent = '';
+  const results = await Promise.all(tests.map(([n,u]) => run(n,u)));
+  out.textContent = results.map(r => r.name + ': ' + r.result).join('\n');
+  out.textContent += '\nDONE';
 })();
 </script>
 </body></html>
