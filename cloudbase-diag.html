@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><title>CloudBase 诊断</title></head>
+<body style="font:16px/1.6 -apple-system,sans-serif;padding:24px;">
+<h1>CloudBase 诊断</h1>
+<pre id="out" style="white-space:pre-wrap;background:#f5f5f5;padding:16px;border-radius:8px;">加载中…</pre>
+<script src="https://static.cloudbase.net/cloudbase-js-sdk/2.17.0/cloudbase.full.js"></script>
+<script>
+(async function () {
+  var out = document.getElementById('out');
+  var lines = [];
+  function log(s) { lines.push(s); out.textContent = lines.join('\n'); }
+  try {
+    log('SDK: ' + (typeof cloudbase));
+    var app = cloudbase.init({ env: 'duimian-checkin-d1fjjjlvaac465d8' });
+    log('init ok');
+    var auth = app.auth({ persistence: 'local' });
+    log('auth instance ok');
+    var signRes = await auth.anonymousAuthProvider().signIn();
+    log('anonymous sign-in ok: ' + JSON.stringify(signRes).slice(0, 300));
+    var db = app.database();
+    var addRes = await db.collection('checkins').add({
+      kind: 'diag',
+      name: 'permission-test',
+      session: '__diag__',
+      created_at: new Date().toISOString()
+    });
+    log('add ok: ' + JSON.stringify(addRes).slice(0, 300));
+    var getRes = await db.collection('checkins').where({ kind: 'diag' }).limit(3).get();
+    log('query ok: count=' + (getRes.data ? getRes.data.length : '?') + ' data=' + JSON.stringify(getRes.data).slice(0, 500));
+    log('DONE');
+  } catch (e) {
+    log('ERROR: ' + (e && (e.message || e.error_description || JSON.stringify(e))));
+    log('DETAIL: ' + JSON.stringify(e).slice(0, 1000));
+    log('DONE');
+  }
+})();
+</script>
+</body></html>
